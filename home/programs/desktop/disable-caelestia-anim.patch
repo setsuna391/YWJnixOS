@@ -1,0 +1,30 @@
+--- a/components/Anim.qml	2026-10-07 09:38:16.927451179 +0800
++++ b/components/Anim.qml	2026-10-07 09:38:21.674370163 +0800
+@@ -1,8 +1,11 @@
+ import qs.config
++import Quickshell
+ import QtQuick
+ 
+ NumberAnimation {
+-    duration: Appearance.anim.durations.normal
++    // CAELESTIA_NO_ANIM=1 全局关闭动画：时长归零，避免 QML 动画驱动在
++    // 高刷屏幕（如 240Hz）下持续触发渲染循环，从而降低 CPU/GPU 占用。
++    duration: Quickshell.env("CAELESTIA_NO_ANIM") === "1" ? 0 : Appearance.anim.durations.normal
+     easing.type: Easing.BezierSpline
+     easing.bezierCurve: Appearance.anim.curves.standard
+ }
+--- a/components/CAnim.qml	2026-10-07 09:38:16.930451128 +0800
++++ b/components/CAnim.qml	2026-10-07 09:38:23.089346063 +0800
+@@ -1,9 +1,11 @@
+ import qs.config
+ import qs.services
++import Quickshell
+ import QtQuick
+ 
+ ColorAnimation {
+-    duration: Colours.transitioning ? 150 : Appearance.anim.durations.normal
++    // CAELESTIA_NO_ANIM=1 全局关闭动画（说明见 Anim.qml）。
++    duration: Quickshell.env("CAELESTIA_NO_ANIM") === "1" ? 0 : (Colours.transitioning ? 150 : Appearance.anim.durations.normal)
+     easing.type: Easing.BezierSpline
+     easing.bezierCurve: Appearance.anim.curves.standard
+ }

@@ -1,0 +1,40 @@
+--- a/plugin/src/Caelestia/Internal/cachingimagemanager.cpp
++++ b/plugin/src/Caelestia/Internal/cachingimagemanager.cpp
+@@ -229,7 +229,7 @@
+     QThreadPool::globalInstance()->setMaxThreadCount(
+         qMin(2, QThread::idealThreadCount()));
+ 
+-    QThreadPool::globalInstance()->start([path, cache, fillMode, size, this] {
++    QThreadPool::globalInstance()->start([path, cache, fillMode, size] {
+         QImage image(path);
+ 
+         if (image.isNull()) {
+@@ -269,11 +269,13 @@
+             return;
+         }
+ 
+-        // Track the new cache entry
++        // Track the new cache entry. trackCacheEntry only touches mutex-guarded
++        // static state, so call it directly from the worker thread. The previous
++        // queued invokeMethod(this, ...) dereferenced `this`, which races with the
++        // manager's destruction (rapid creation/destruction of image items) and
++        // caused a use-after-free SIGSEGV in QObject::thread().
+         const QFileInfo info(cache);
+-        QMetaObject::invokeMethod(
+-            this, [this, cache, size = info.size()]() { trackCacheEntry(cache, size); },
+-            Qt::QueuedConnection);
++        trackCacheEntry(cache, info.size());
+     });
+ }
+ 
+--- a/plugin/src/Caelestia/Internal/cachingimagemanager.hpp
++++ b/plugin/src/Caelestia/Internal/cachingimagemanager.hpp
+@@ -80,7 +80,7 @@
+     [[nodiscard]] QSize effectiveSize() const;
+ 
+     void createCache(const QString& path, const QString& cache, const QString& fillMode, const QSize& size);
+-    void trackCacheEntry(const QString& cachePath, qint64 fileSize);
++    static void trackCacheEntry(const QString& cachePath, qint64 fileSize);
+     void evictIfNeeded();
+     [[nodiscard]] static QString sha256sum(const QString& path);
+ };

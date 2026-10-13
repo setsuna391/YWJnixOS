@@ -1,0 +1,19 @@
+--- a/modules/launcher/services/Apps.qml
++++ b/modules/launcher/services/Apps.qml
+@@ -69,5 +69,15 @@ Singleton {
+         id: variants
+ 
+-        model: [...DesktopEntries.applications.values].sort((a, b) => a.name.localeCompare(b.name))
++        model: [...DesktopEntries.applications.values]
++            .filter(entry => {
++                const values = [entry.id, `${entry.id}.desktop`, entry.name, entry.execString]
++                    .filter(value => value !== undefined && value !== null)
++                    .map(value => String(value).toLowerCase());
++                return !Config.launcher.hiddenApps.some(hidden => {
++                    const needle = String(hidden).toLowerCase();
++                    return values.some(value => value === needle || value.includes(needle));
++                });
++            })
++            .sort((a, b) => a.name.localeCompare(b.name))
+ 
+         QtObject {

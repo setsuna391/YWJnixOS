@@ -1,0 +1,13 @@
+# nix 构建产物软链
+/result
+/result-*
+
+# direnv
+/.direnv/
+
+# 加密密钥（sops / agenix）
+*.age
+
+# 编辑器 / 临时文件
+*~
+*.swp

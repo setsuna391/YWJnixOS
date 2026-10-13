@@ -1,0 +1,16 @@
+--- a/modules/bar/popouts/Wrapper.qml
++++ b/modules/bar/popouts/Wrapper.qml
+@@ -30,8 +30,11 @@
+     function detach(mode: string): void {
+         animLength = Appearance.anim.durations.large;
+         if (mode != "winfo") {
+-            detachedMode = "any";
+-            queuedMode = mode;
++            // 默认直接打开浮动设置窗口（等价于自动点了 "Float window"）
++            WindowFactory.create(null, {
++                active: mode
++            });
++            return;
+         }
+         
+         focus = true;

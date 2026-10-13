@@ -1,0 +1,7 @@
+--- a/shell.qml
++++ b/shell.qml
+@@ -18,4 +18,3 @@
+ ShellRoot {  settings.watchFiles: false
+-    Backdrop {}
+    Background {}
+    Drawers {}

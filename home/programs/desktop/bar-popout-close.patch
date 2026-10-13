@@ -1,0 +1,23 @@
+--- a/modules/bar/Bar.qml
++++ b/modules/bar/Bar.qml
+@@ -60,6 +60,8 @@
+                 popouts.currentName = icon.name;
+                 popouts.currentCenter = Qt.binding(() => icon.mapToItem(root, 0, icon.implicitHeight / 2).y);
+                 popouts.hasCurrent = true;
++            } else {
++                popouts.hasCurrent = false;
+             }
+         } else if (id === "tray") {
+             const index = Math.floor(((y - top) / itemHeight) * item.items.count);
+@@ -68,7 +70,11 @@
+                 popouts.currentName = `traymenu${index}`;
+                 popouts.currentCenter = Qt.binding(() => trayItem.mapToItem(root, 0, trayItem.implicitHeight / 2).y);
+                 popouts.hasCurrent = true;
++            } else {
++                popouts.hasCurrent = false;
+             }
++        } else {
++            popouts.hasCurrent = false;
+         }
+     }
+ 

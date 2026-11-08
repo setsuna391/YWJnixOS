@@ -1,90 +1,63 @@
-# setsuna NixOS 配置
+# YWJ NixOS
 
-本机唯一的一套 NixOS 配置，位于 `/etc/nixos`。
+基于 Flakes 的个人 NixOS 和 Home Manager 配置，主要用于 Lenovo 笔记本。硬件、显示器和用户设置针对本机编写，其他机器使用前需要调整。
 
-- 桌面：**niri + caelestia**（quickshell 外壳），没有 KDE
-- 显卡：**NVIDIA RTX 5070 Laptop**（`10DE:2D58`），专有驱动 + 开源内核模块
-- 内核：`linux-zen`
-- 登录：tty1 自动登录 → fish → `niri-session`（无显示管理器）
+## 配置概览
 
-## 目录结构
+| 项目 | 配置 |
+| --- | --- |
+| 主机 / 用户 | `nixos` / `setsuna` |
+| 桌面 | niri + Caelestia，另有 Serpantinum 配置 |
+| 登录 | greetd + Dux Greeter，默认进入 niri |
+| 显卡 | NVIDIA RTX 5070 Laptop，NVIDIA 驱动及开源内核模块 |
+| 内核 | `linuxPackages_latest`，额外启用 AW88399 音频模块 |
+| 显示 | DP-1 2560×1440 @ 240 Hz；eDP-1 2560×1600 @ 240 Hz，缩放均为 1.25 |
+| 引导 | systemd-boot + Plymouth |
 
-- `flake.nix` — flake 入口（flake-parts）
-- `hosts/` — 主机定义（`hosts.nix` 列出主机，`default.nix` 生成 `nixosConfigurations` / `homeConfigurations`）
-  - `hosts/setsuna/` — 本机的 `hardware-configuration.nix` / `os.nix` / `home.nix`（显示器等）
-- `os/` — NixOS 系统配置
-  - `os/system/` — configuration / boot / fonts / stylix
-  - `os/programs/` — 系统级程序
-- `home/` — home-manager 配置
-  - `home/programs/` — 应用（desktop = niri + caelestia、shell、browser、coding…）
-  - `home/tweaks/` — `desktopShell = "caelestia"`、stylix、配色、壁纸
-  - `home/lib/` — 配色 / 壁纸辅助函数
-- `nix/` — nix 设置、镜像源、nh
-- `modules/home-manager/` — 自定义 home-manager 模块（monitors）
-- `overlays/` `pkgs/` — 自定义包
-- `templates/` — flake 模板
+系统和 Home Manager 的 `stateVersion` 均为 `23.11`，不代表当前 NixOS 版本；不要为升级系统而随意修改它们。
 
-## 本机信息
+## 目录
 
-- 主机名：`nixos`，用户：`setsuna`
-- stateVersion：system `23.11` / home `23.11`
-- 硬件：`hosts/setsuna/hardware-configuration.nix`
-- 显示器：`hosts/setsuna/home.nix`（主屏 `DP-1`）
-
-## 构建 / 切换
-
-```bash
-# 系统
-sudo nixos-rebuild switch --flake /etc/nixos#nixos
-# 或（NH_FLAKE 已指向 /etc/nixos）
-nh os switch
-
-# home-manager（系统 switch 不会自动应用 home，需单独跑）
-home-manager switch --flake /etc/nixos#setsuna@nixos -b backup
-# 或
-nh home switch
+```text
+flake.nix / flake.lock   Flake 入口与锁定的依赖
+hosts/                   主机、硬件和显示器配置
+os/                      NixOS 系统与程序配置
+home/                    Home Manager 桌面、程序和主题配置
+nix/                     Nix 设置与镜像源
+modules/home-manager/    自定义 Home Manager 模块
+pkgs/ 和 overlays/       自定义软件包与覆盖
+files/                   配置资源
+templates/               Flake 模板
 ```
 
-> 只维护 `/etc/nixos` 这一份配置，不要在别处再留第二份，否则容易"两套配置打架"。
+## 应用配置
 
-## 代理
+系统与 Home Manager 是独立配置，需要分别切换。以下命令假定配置位于 `/etc/nixos`：
 
-- `clash-verge-rev` 2.5.10（本地打包在 `pkgs/clash-verge-rev`，混合端口 `7890`），
-  通过 `clash-verge-service` 以 root 运行内核并启用 TUN（`Meta` 网卡）；
-  niri 登录时用 `/run/wrappers/bin/clash-verge` 自启（带 `CAP_NET_ADMIN`）
-- `nix-daemon` 通过 `127.0.0.1:7890` 访问 cache（见 `os/system/configuration.nix`）
-- 镜像源见 `nix/substituters.nix`
+```bash
+# NixOS 系统
+sudo nixos-rebuild switch --flake /etc/nixos#nixos
+
+# 用户环境（wayvnc 配置读取本地文件，需要 --impure）
+home-manager switch --flake '/etc/nixos#setsuna@nixos' --impure
+```
+
+登录界面由独立的 greetd 进程启动；修改其配置后，如果新设置没有生效，请保存工作并重启。内核和启动参数的更改也需要重启。
+
+## 硬件与部署
+
+- 本机硬件和文件系统 UUID 在 `hosts/setsuna/hardware-configuration.nix`；休眠恢复设备在 `hosts/setsuna/os.nix`。迁移到其他电脑时需重新生成或修改，不能直接照搬。
+- 显示器设置在 `hosts/setsuna/home.nix`，登录界面显示模式在 `os/system/greeter.nix`。
+- 默认使用 `s2idle`，因为本机曾出现 deep 睡眠唤醒后 USB 控制器失效。睡眠和唤醒仍需根据硬件实际测试。
+- 使用本地打包的 Clash Verge；Nix 代理及缓存设置见 `os/system/configuration.nix` 和 `nix/substituters.nix`。代理未运行时，依赖它的下载可能失败。
+- 可选的 `qfrpSrc`、`whalePetSrc` 本地源码输入默认注释，启用前需准备相应目录。
+
+## 敏感信息
+
+请勿提交密码、API 密钥、SSH 私钥或 wayvnc 私钥。本机 wayvnc 读取 `~/.config/wayvnc/password` 和 `~/.config/wayvnc/rsa_key.pem`；新设备需要自行准备。
+
+**注意：**目前密码通过 `builtins.readFile` 参与 Nix 求值，生成的配置可能进入其他本地用户可读的 Nix store；不要将其视为安全的密钥管理方案。公开仓库中不应放置密钥，建议改用运行时读取的安全方案。
 
 ## 版本控制
 
-本目录已是一个 git 仓库（`git init` 于 `/etc/nixos`）。上传/备份：
-
-```bash
-git remote add origin <你的仓库地址>
-git push -u origin main
-```
-
-> 注意：`/etc/nixos` 变成 git 仓库后，flake 只会包含 **git 已跟踪**的文件。
-> 新增文件后记得 `git add`，否则 `nixos-rebuild` 看不到它。
-
-### 密钥 / 敏感信息
-
-仓库内**不含任何明文密钥**，请勿提交以下内容：
-
-- `~/.config/wayvnc/password` —— wayvnc 密码（`wayvnc.nix` 运行时从此文件读取）
-- `~/.config/wayvnc/rsa_key.pem` —— wayvnc RSA 私钥
-- `~/.ssh/`、`~/frp-six.com.key` 等家目录密钥
-- claude / deepseek 等 API Key（放在 `~/.config/*/api_key`，不入 nix）
-
-首次在新机器部署时需自行创建 `~/.config/wayvnc/password`（末尾**不要**换行）。
-
-### 外部本地依赖
-
-`flake.nix` 中 `qfrpSrc`、`whalePetSrc` 两个 `path:` 输入默认已注释（它们依赖本机
-`~/Documents/project/` 下的源码）。相关模块已用 `inputs.xxx or null` 守卫，未声明时
-自动跳过。需要时取消注释并 `nix flake lock /etc/nixos`。
-
-## 备注 / 待办
-
-- AMD 核显在 BIOS 中已关闭，实际只有独显工作；`hardware.nvidia.prime` 里的 amdgpu 配置不会生效
-- zotero 暂时移除（nixpkgs 版本编译失败），需要时改用 flatpak
+仓库地址：[setsuna391/YWJnixOS](https://github.com/setsuna391/YWJnixOS)。目前 `/etc/nixos` 是独立目录，不是 Git 工作区；修改后需要同步到仓库工作区再提交。若以后直接从 Git 工作区构建 Flake，新增文件需先 `git add` 才会被纳入构建。

@@ -15,7 +15,11 @@ let
       hash = "sha256-mPASPzjoamBqpYP3TSGudBKGeekh6n7AxDqyYwN2fp4=";
     };
     postFixup = (old.postFixup or "") + ''
-      substituteInPlace $out/bin/hmcl --replace-fail ' -jar ' ' -Dglass.gtk.uiScale=1.25 -jar '
+      # 1) 把 JVM 参数放到 -jar 之前（nixpkgs 里 -Djdk.gtk.version=3 被放在了 -jar 后面，实际变成了程序参数）
+      # 2) 强制 GPU 渲染，并关闭 vsync（XWayland 下 vsync 容易把帧率锁低/抖动）
+      substituteInPlace $out/bin/hmcl \
+        --replace-fail ' -jar ' ' -Djdk.gtk.version=3 -Dprism.forceGPU=true -Dprism.vsync=false -Djavafx.animation.pulse=240 -Djavafx.animation.framerate=240 -Dglass.gtk.uiScale=1.25 -jar ' \
+        --replace-fail ' -Djdk.gtk.version=3 "$@"' ' "$@"'
     '';
   });
 in

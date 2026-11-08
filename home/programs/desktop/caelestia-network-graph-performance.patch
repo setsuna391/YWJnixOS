@@ -1,0 +1,26 @@
+--- a/modules/dashboard/Performance.qml
++++ b/modules/dashboard/Performance.qml
+@@ -758,7 +758,7 @@
+                     property var upHistory: NetworkUsage.uploadHistory
+                     property real targetMax: 1024
+                     property real smoothMax: targetMax
+-                    property real slideProgress: 0
++                    property real slideProgress: 1
+                     property int _tickCount: 0
+                     property int _lastTickCount: -1
+ 
+@@ -843,14 +843,6 @@
+                         onTriggered: sparklineCanvas._tickCount++
+                     }
+ 
+-                    NumberAnimation on slideProgress {
+-                        from: 0
+-                        to: 1
+-                        duration: Config.dashboard.resourceUpdateInterval
+-                        loops: Animation.Infinite
+-                        running: true
+-                    }
+-
+                     Behavior on smoothMax {
+                         Anim {
+                             duration: Appearance.anim.durations.large

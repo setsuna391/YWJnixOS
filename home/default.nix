@@ -34,7 +34,8 @@
       wechat
 
       # 数值计算（MATLAB 替代）
-      octave
+      # octave 默认 enableQt = false，不带 Qt GUI；octaveFull 才有 octave --gui
+      octaveFull
     ]
     ++ lib.optionals (inputs.qfrpSrc or null != null) [
       # 自打包软件（源码来自 flake input qfrpSrc，直接指向开发目录）

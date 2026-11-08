@@ -6,12 +6,35 @@
   ...
 }:
 {
-  imports = [
-    ./boot.nix
+  # 用本地打包的 Clash Verge 2.5.10 覆盖 nixpkgs 里的 2.5.2
+  nixpkgs.overlays = [
+    (final: prev: {
+      clash-verge-rev = final.callPackage ../../pkgs/clash-verge-rev { };
+    })
   ];
 
-  # NVIDIA 独显 (RTX 50 系 / Blackwell, 10DE:2D58) + AMD 核显 (1002:164E)
-  # 专有驱动 + PRIME sync: 由 NVIDIA 渲染, 核显负责物理输出
+  imports = [
+    ./boot.nix
+    ./clash-verge.nix
+    ./greeter.nix
+  ];
+
+  # nixpkgs 自带的 clash-verge 模块是给 2.5.2 的，用上面本地的新模块替换
+  disabledModules = [ "programs/clash-verge.nix" ];
+
+  programs.clash-verge = {
+    enable = true;
+    serviceMode = true; # TUN 需要 root 服务来运行内核
+    tunMode = true; # GUI 需要 CAP_NET_ADMIN 才能设置 DNS
+    # 不用模块自带的 autoStart，下面自定义为带 capability 的 wrapper
+    package = pkgs.clash-verge-rev;
+  };
+
+  # 自启交给 niri 的 spawn-at-startup（见 home/programs/desktop/niri/autostart.nix），
+  # 这样能用上 /run/wrappers/bin 里带 tunMode capabilities 的 wrapper。
+
+  # NVIDIA 独显 (RTX 50 系 / Blackwell, 10DE:2D58)，本机 BIOS 下只有独显可见
+  # （AMD 核显 1002:164E 未启用），因此不再使用 PRIME sync，纯 NVIDIA 输出
   services.xserver.videoDrivers = [ "nvidia" ];
   hardware.graphics.enable = true;
   hardware.nvidia = {
@@ -21,15 +44,8 @@
     package = config.boot.kernelPackages.nvidiaPackages.latest;
     # 休眠/挂起后重新初始化显存与显示输出, 修复唤醒后检测不到外接显示器
     powerManagement.enable = true;
-    prime = {
-      sync.enable = true;
-      amdgpuBusId = "PCI:5:0:0";
-      nvidiaBusId = "PCI:1:0:0";
-    };
   };
 
-  # Steam（自动启用 32 位图形库 + 手柄 udev 规则）
-  programs.steam.enable = true;
 
   networking.networkmanager.enable = true;
 
@@ -60,8 +76,6 @@
   };
 
   services = {
-    getty.autologinUser = user;
-
     fprintd = {
       enable = true;
     };
@@ -90,10 +104,26 @@
     tuned.enable = true;
   };
 
+  # 给 nix-daemon 和 nix 客户端走本地 HTTP 代理（127.0.0.1:7890）。
+  # 国内镜像通过 no_proxy 直连，只有 GitHub / cache.nixos.org 等走代理。
+  # 注意：代理未启动时，需要代理的资源会拉取失败（clash-verge / mihomo 监听 7890）。
   systemd.services.nix-daemon.environment = {
     http_proxy = "http://127.0.0.1:7890";
     https_proxy = "http://127.0.0.1:7890";
     all_proxy = "http://127.0.0.1:7890";
+    no_proxy = "127.0.0.1,localhost,::1,mirrors.tuna.tsinghua.edu.cn,mirrors.ustc.edu.cn";
+  };
+
+  # 让 sudo 保留代理变量，nix 客户端拉取 flake inputs 时也能走代理
+  security.sudo.extraConfig = ''
+    Defaults env_keep += "http_proxy https_proxy all_proxy no_proxy"
+  '';
+
+  environment.sessionVariables = {
+    http_proxy = "http://127.0.0.1:7890";
+    https_proxy = "http://127.0.0.1:7890";
+    all_proxy = "http://127.0.0.1:7890";
+    no_proxy = "127.0.0.1,localhost,::1,mirrors.tuna.tsinghua.edu.cn,mirrors.ustc.edu.cn";
   };
 
   # niri 下让 xdg-desktop-portal 走 gnome 后端，以支持屏幕共享/截图（QQ、浏览器等）
@@ -196,21 +226,13 @@
   };
 
   systemd.user.services = {
-    polkit-gnome-authentication-agent-1 = {
-      description = "polkit-gnome-authentication-agent-1";
-      wantedBy = [ "graphical-session.target" ];
-      wants = [ "graphical-session.target" ];
-      after = [ "graphical-session.target" ];
-      serviceConfig = {
-        Type = "simple";
-        ExecStart = "${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1";
-        Restart = "on-failure";
-        RestartSec = 1;
-        TimeoutStopSec = 10;
-      };
-    };
     niri-flake-polkit.enable = false;
+    docker.wantedBy = lib.mkForce [ ];
   };
+
+  # 保留 Docker 和 libvirt 的手动/按需启动，但不在开机时主动启动服务。
+  systemd.services.docker.wantedBy = lib.mkForce [ ];
+  systemd.services.libvirtd.wantedBy = lib.mkForce [ ];
 
   virtualisation = {
     libvirtd.enable = true;
@@ -222,7 +244,7 @@
 
     docker = {
       enable = true;
-      storageDriver = "btrfs";
+      storageDriver = "overlay2";
       rootless = {
         enable = true;
         setSocketVariable = true;

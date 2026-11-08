@@ -20,6 +20,7 @@ let
     inputs.niri.homeModules.niri
     inputs.nixvim.homeModules.nixvim
     inputs.caelestia-shell.homeManagerModules.default
+    inputs.serpantinum.homeManagerModules.default
   ]
   ++ (builtins.attrValues self.homeManagerModules);
 
@@ -49,7 +50,17 @@ let
       };
 
       homeConfigurations."${user}@${host}" = inputs.home-manager.lib.homeManagerConfiguration {
-        pkgs = nixpkgs.legacyPackages."x86_64-linux";
+        # home-manager 的 fcitx5 模块仍会拉 gtk2（immodule cache），
+        # 新版 nixpkgs 把 gtk2 标为 broken 导致评估被拒，这里只清除该标记。
+        pkgs = nixpkgs.legacyPackages."x86_64-linux".extend (
+          _final: prev: {
+            gtk2 = prev.gtk2.overrideAttrs (old: {
+              meta = old.meta // {
+                problems = builtins.removeAttrs (old.meta.problems or { }) [ "broken" ];
+              };
+            });
+          }
+        );
         extraSpecialArgs = {
           inherit
             inputs

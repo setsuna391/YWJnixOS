@@ -12,7 +12,7 @@ with config.lib.stylix.colors;
   # QQ（Wayland修复版）图标：原 desktop 只有 Icon=qq（主题名），
   # tofi 在小尺寸路径找不到会显示空白，这里用 QQ 自带图标绝对路径覆盖。
   xdg.desktopEntries."linuxqq-wayland-fix" = {
-    name = "QQ（Wayland修复版）";
+    name = "QQ";
     genericName = "QQ (Wayland Fix)";
     comment = "修复了 Wayland 下屏幕共享、共享电脑声音和剪贴板的 QQ";
     exec = "linuxqq-wayland-fix %U";

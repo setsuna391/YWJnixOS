@@ -7,7 +7,6 @@
     };
 
   modifications = final: prev: {
-    qutebrowser = prev.qutebrowser.override { enableWideVine = true; };
     base16-schemes = prev.base16-schemes.overrideAttrs (oldAttrs: {
       installPhase = ''
         runHook preInstall

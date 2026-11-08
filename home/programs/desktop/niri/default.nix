@@ -87,13 +87,10 @@ in
             "quickterminal"
           ]; # 临时浮动终端
           "Mod+Z".action = spawn [
-            "/home/${user}/.nix-profile/bin/caelestia-shell"
-            "ipc"
-            "call"
-            "drawers"
-            "toggle"
-            "launcher"
-          ]; # caelestia 程序菜单
+            "sh"
+            "-c"
+            ''if systemctl --user is-active --quiet serpantinum-preview.service; then serpantinum msg toggle launcher; else /home/${user}/.nix-profile/bin/caelestia-shell ipc call drawers toggle launcher; fi''
+          ]; # 当前桌面的程序菜单
           "Mod+B".action = spawn [
             "sh"
             "-c"
@@ -455,9 +452,13 @@ in
               open-floating = true;
             }
             {
+              # Qt Creator 的 demo 项目运行窗口
+              matches = [ { app-id = "^demo$"; } ];
+              open-floating = true;
+            }
+            {
               matches = matchAppIDs [
                 "firefox"
-                "org.qutebrowser.qutebrowser"
                 "kitty"
                 "evince"
                 "zathura"
@@ -531,7 +532,7 @@ in
         layout = {
           gaps = 12;
           border = {
-            enable = true;
+            enable = false;
             width = 4;
             active = {
               gradient = {

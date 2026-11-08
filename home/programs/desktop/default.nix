@@ -7,6 +7,7 @@
     ./mako.nix
     ./niri
     ./caelestia.nix
+    ./serpantinum.nix
     ./wayvnc.nix
     ./whale-pet.nix
     ./screensaver.nix
@@ -18,7 +19,9 @@
     wlsunset
     xwayland-satellite
     wmname
-    halley
+    # halley: 构建时要 git clone github.com/Smithay/smithay（墙内会失败）。
+    # 不用这个合成器，先注释；有代理后取消注释即可。
+    # halley
   ];
   home.file.".scripts" = {
     source = ./scripts;

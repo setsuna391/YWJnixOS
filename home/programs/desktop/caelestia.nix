@@ -27,6 +27,8 @@ let
         ./bar-popout-close.patch
         ./tray-menu-close.patch
         ./disable-caelestia-anim.patch
+        ./caelestia-network-graph-performance.patch
+        ./caelestia-dashboard-paging.patch
         ./filter-caelestia-hidden-apps.patch
         ./controlcenter-default-floating.patch
       ];
@@ -53,13 +55,26 @@ let
     '';
   };
 
+  # caelestia-cli 用 setuptools-scm 从 git 推断版本，flake 源码没有 .git 会失败
+  caelestia-cli =
+    inputs.caelestia-shell.inputs.caelestia-cli.packages.${system}.default.overrideAttrs
+      (old: {
+        # flake 源码没有 .git，hatch-vcs 无法推断版本；
+        # 改成静态版本并移除 vcs 版本源。
+        # 注意：该包自定义了 patchPhase，必须追加到这里，postPatch 不会执行。
+        patchPhase = (old.patchPhase or "") + ''
+          substituteInPlace pyproject.toml \
+            --replace-fail 'dynamic = ["version"]' 'version = "0.0.0"'
+          sed -i '/^\[tool\.hatch\.version\]/,/^$/d' pyproject.toml
+        '';
+      });
+
   caelestia-shell-patched =
     (pkgs.callPackage (patchedSrc + "/nix") {
       rev = inputs.caelestia-shell.rev or inputs.caelestia-shell.dirtyRev or "patched";
       stdenv = pkgs.clangStdenv;
-      inherit quickshell;
+      inherit quickshell caelestia-cli;
       app2unit = pkgs.callPackage (patchedSrc + "/nix/app2unit.nix") { inherit pkgs; };
-      caelestia-cli = inputs.caelestia-shell.inputs.caelestia-cli.packages.${system}.default;
       withCli = true;
       # 颜色生成脚本运行所需的运行时依赖 (该 fork 未自带 python 依赖环境)
       extraRuntimeDeps = [
@@ -93,6 +108,12 @@ let
           # 脚本默认从 ~/.config/quickshell/<name> 查找配置，但 shell 实际读取 ~/.config/niri_caelestia
           sed -i 's|CONFIG_DIR="$XDG_CONFIG_HOME/quickshell/$QUICKSHELL_CONFIG_NAME"|CONFIG_DIR="$XDG_CONFIG_HOME/niri_caelestia"|' \
             $out/share/caelestia-shell/scripts/colors/_env.sh
+          # Nix store 中的模板只读；替换旧文件，避免下一次复制时报权限错误。
+          substituteInPlace $out/share/caelestia-shell/scripts/colors/applycolor.sh \
+            --replace-fail 'cp "$SCRIPT_DIR/terminal/kitty-theme.conf"' 'cp --remove-destination "$SCRIPT_DIR/terminal/kitty-theme.conf"'
+          # 非 Plasma 会话不运行 KDE 专用配色程序。
+          substituteInPlace $out/share/caelestia-shell/scripts/colors/switchwall.sh \
+            --replace-fail 'if [[ -f "$kde_wrapper" ]]; then' 'if [[ -f "$kde_wrapper" ]] && ${pkgs.systemd}/bin/busctl --user --quiet status org.kde.plasmashell; then'
         '';
       });
 in
@@ -107,11 +128,14 @@ in
 
   programs.caelestia = {
     package = caelestia-shell-patched;
-    # 过渡动画: 之前因高刷(240Hz)下动画持续触发渲染循环、quickshell 高占用
-    # 而全局关闭 (CAELESTIA_NO_ANIM=1 -> Anim.qml 时长归零)。软件渲染(llvmpipe)
-    # 问题修复后改为 0 重新启用, 提升界面流畅度; 若 CPU/GPU 占用过高可改回 1。
+    # 使用打过版本补丁的 CLI（niri 快捷键等会引用这个选项）
+    cli.package = caelestia-cli;
+    # 保留界面动画；实测关闭后没有明显降低当前 CPU 占用。
     systemd.environment = [ "CAELESTIA_NO_ANIM=0" ];
     settings = {
+      # 降低资源与媒体信息的刷新频率，保留仪表盘功能。
+      dashboard.resourceUpdateInterval = 2000;
+      dashboard.mediaUpdateInterval = 1000;
       # 禁用 Novel/Manga 功能: 缺少后端导致进程反复以 code 127 退出, 刷屏并空转 CPU
       extra = {
         novel = false;
@@ -120,20 +144,25 @@ in
       general.idle = {
         timeouts = [ ];
       };
-      # 该 fork 的会话菜单「休眠」按钮: 本机无 swap, 直接改成睡眠
+      general.isDistLogo = true;
+      # 会话菜单「休眠」使用 swap 分区，恢复设备在主机系统配置中指定。
       session.commands.hibernate = [
         "systemctl"
-        "suspend"
+        "hibernate"
       ];
       appearance.font.family = {
         mono = config.stylix.fonts.monospace.name;
-        sans = "Hug Me Tight";
+        sans = "Noto Sans CJK SC";
       };
-      appearance.font.scale = 1.2;
+      appearance.font.scale = 1.3;
       appearance.anim.durations.scale = 0.5;
       appearance.transparency.reduceTransparency = true;
       background.enabled = false;
       launcher.hiddenApps = [
+        "htop.desktop"
+        "gparted.desktop"
+        "org.gnome.DiskUtility.desktop"
+        "nvidia-settings.desktop"
         "base"
         "calc"
         "draw"
@@ -229,9 +258,22 @@ in
           background = true;
           recolour = true;
         };
+        clock = {
+          background = true;
+          showDate = true;
+          showIcon = true;
+        };
+        status = {
+          showAudio = true;
+          showKbLayout = true;
+          showNetwork = true;
+          showBluetooth = true;
+          showBattery = true;
+        };
       };
       services = {
-        weatherLocation = "西湖区, 浙江省";
+        # Open-Meteo 的 Kunshan 搜索结果为江苏省苏州市昆山。
+        weatherLocation = "Kunshan";
         useFahrenheit = false;
         smartScheme = false;
         useTwelveHourClock = false;

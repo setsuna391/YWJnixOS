@@ -49,7 +49,9 @@ nh home switch
 
 ## 代理
 
-- `clash-verge-rev`（GUI，混合端口 `7890`），只装程序、不自动启动，订阅在 GUI 内导入
+- `clash-verge-rev` 2.5.10（本地打包在 `pkgs/clash-verge-rev`，混合端口 `7890`），
+  通过 `clash-verge-service` 以 root 运行内核并启用 TUN（`Meta` 网卡）；
+  niri 登录时用 `/run/wrappers/bin/clash-verge` 自启（带 `CAP_NET_ADMIN`）
 - `nix-daemon` 通过 `127.0.0.1:7890` 访问 cache（见 `os/system/configuration.nix`）
 - 镜像源见 `nix/substituters.nix`
 

@@ -3,31 +3,9 @@
   programs.nixvim.plugins.treesitter = {
     enable = true;
     settings = {
-      auto_install = true;
-      ensure_installed = [
-        "diff"
-        "bash"
-        "fish"
-        "python"
-        "c"
-        "cpp"
-        "qmljs"
-        "cmake"
-        "yaml"
-        "lua"
-        "json"
-        "nix"
-        "regex"
-        "toml"
-        "vim"
-        "markdown"
-        "rust"
-        "jsonc"
-        "glsl"
-        "css"
-        "hyprlang"
-        "r"
-      ];
+      # 解析器由 Nix 提供，不在 Neovim 启动时下载。
+      auto_install = false;
+      ensure_installed = [ ];
       highlight.enable = true;
       indent.enable = true;
     };

@@ -3,11 +3,11 @@
   monitors = {
     "DP-1" = {
       isMain = true;
-      scale = 1.0;
+      scale = 1.25;
       mode = {
         width = 2560;
         height = 1440;
-        refresh = 240.0;
+        refresh = 240.002;
       };
       position = {
         x = 0;

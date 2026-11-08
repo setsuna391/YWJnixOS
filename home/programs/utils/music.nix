@@ -8,8 +8,30 @@
     # 桌面歌词悬浮层：MPRIS + wlr-layer-shell，适配 niri
     kotonoha
     # fum
-    lmms
   ];
+
+  # 使用图标绝对路径，避免部分启动器无法解析 hicolor 中的 Kotonoha 图标。
+  xdg.dataFile."applications/kotonoha.desktop".source = pkgs.runCommand "kotonoha-desktop" { } ''
+    substitute ${pkgs.kotonoha}/share/applications/kotonoha.desktop $out \
+      --replace-fail 'Icon=kotonoha' 'Icon=${pkgs.kotonoha}/share/icons/hicolor/1024x1024/apps/kotonoha.png'
+  '';
+
+  # musicfox 本身不带 desktop 文件/图标，补一份，
+  # 让启动器和 Caelestia 的 MPRIS 媒体组件能正确显示图标。
+  xdg.dataFile."applications/musicfox.desktop".text = ''
+    [Desktop Entry]
+    Type=Application
+    Name=musicfox
+    Comment=Terminal NetEase Cloud Music client
+    Exec=kitty musicfox
+    Icon=musicfox
+    Terminal=false
+    Categories=AudioVideo;Audio;Player;
+    Keywords=music;netease;cloud;musicfox;
+    StartupWMClass=musicfox
+  '';
+
+  xdg.dataFile."icons/hicolor/512x512/apps/musicfox.png".source = ./files/musicfox.png;
   xdg.configFile."go-musicfox/go-musicfox.ini".text =
     # ini
     ''

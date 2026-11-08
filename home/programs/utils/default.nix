@@ -16,7 +16,6 @@
     killall
     htop
     gparted
-    gimp3
     appimage-run
     yad
     jq

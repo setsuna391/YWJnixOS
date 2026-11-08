@@ -74,6 +74,11 @@
       inputs.quickshell.follows = "quickshell";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # 与 Eden 的配置使用同一版本，作为可手动启动的备选桌面。
+    serpantinum = {
+      url = "github:ilyamiro/serpantinum/4cd698e83195b32e25afa4a385a7c2abdf7ab85c";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     awww.url = "git+https://codeberg.org/LGFae/awww";
     nixvim.url = "github:nix-community/nixvim/nixos-25.11";
     nixd = {

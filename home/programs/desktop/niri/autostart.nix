@@ -59,5 +59,7 @@ in
     { command = [ "${pkgs.xwayland-satellite}/bin/xwayland-satellite" ]; }
     # 桌面歌词（跟随 MPRIS 播放器，如 go-musicfox）
     { command = [ "${lib.getExe pkgs.kotonoha}" ]; }
+    # Clash Verge：用带 CAP_NET_ADMIN 的 security wrapper，TUN 才能设置 DNS
+    { command = [ "/run/wrappers/bin/clash-verge" ]; }
   ];
 }
